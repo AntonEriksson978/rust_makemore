@@ -11,6 +11,7 @@ fn main() -> io::Result<()> {
     let reader = BufReader::new(input_file);
     let words = reader
         .lines()
+        .take(10)
         .map(|line| line.unwrap())
         .collect::<Vec<String>>();
 
@@ -20,9 +21,10 @@ fn main() -> io::Result<()> {
             .chain(word.chars())
             .chain(iter::once('E'))
             .collect();
-        for (ch1, ch2) in chars.windows(2).map(|w| (w[0], w[1])) {
-            let bigram = (ch1, ch2);
-            bigram_counts.insert(bigram, bigram_counts.get(&bigram).unwrap_or(&0) + 1);
+        let bigrams = chars.windows(2).map(|w| (w[0], w[1]));
+        for bigram in bigrams {
+            let count = bigram_counts.get(&bigram).unwrap_or(&0) + 1;
+            bigram_counts.insert(bigram, count);
         }
     }
     println!("{:?}", bigram_counts);
