@@ -1,12 +1,11 @@
 use burn::backend::candle::CandleDevice;
 use burn::backend::Candle;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::iter;
 use std::path::Path;
 
-use burn::tensor::{Data, Int, Tensor};
+use burn::tensor::{Data, Float, Tensor};
 
 type BE = Candle;
 fn main() -> io::Result<()> {
@@ -50,7 +49,7 @@ fn main() -> io::Result<()> {
         (26, 'z'),
     ];
 
-    let mut arr = [[0.0; 27]; 27];
+    let mut bigram_counts = [[0.0; 27]; 27];
     for word in words {
         let chars: Vec<char> = iter::once('.')
             .chain(word.chars())
@@ -60,10 +59,13 @@ fn main() -> io::Result<()> {
         for bigram in bigrams {
             let start = alphabet.iter().find(|(_, c)| *c == bigram.0).unwrap().0 as usize;
             let end = alphabet.iter().find(|(_, c)| *c == bigram.1).unwrap().0 as usize;
-            arr[start][end] += 1.0;
+            bigram_counts[start][end] += 1.0;
         }
     }
-    let tensor = Tensor::<BE, 2>::from_floats(arr, &device);
+
+    let counts_tensor = Tensor::<BE, 2>::from_floats(bigram_counts, &device);
+    let prob_tensor = counts_tensor.clone() / counts_tensor.clone().sum_dim(1);
+    println!("{}", prob_tensor);
 
     Ok(())
 }
