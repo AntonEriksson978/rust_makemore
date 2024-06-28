@@ -1,9 +1,14 @@
+use burn::backend::candle::CandleDevice;
+use burn::backend::Candle;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::iter;
 use std::path::Path;
 
+use burn::tensor::Tensor;
+
+type BE = Candle;
 fn main() -> io::Result<()> {
     let input_path = Path::new("data/names.txt");
 
@@ -14,6 +19,11 @@ fn main() -> io::Result<()> {
         .take(10)
         .map(|line| line.unwrap())
         .collect::<Vec<String>>();
+
+    let device = CandleDevice::default();
+    let a = Tensor::<BE, 2>::full([28, 28], 0, &device);
+
+    println!("{}", a);
 
     let mut bigram_counts = HashMap::<(char, char), i32>::new();
     for word in words {
