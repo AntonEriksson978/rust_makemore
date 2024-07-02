@@ -74,6 +74,7 @@ fn main() -> io::Result<()> {
     // // println!("{}", prob_tensor.slice([0..1, 0..1]).to_data());
 
     let mut log_prob = 0.0;
+    let mut n = 0.0;
     for word in words.iter().take(3) {
         let chars: Vec<char> = iter::once('.')
             .chain(word.chars())
@@ -87,7 +88,7 @@ fn main() -> io::Result<()> {
                 .clone()
                 .slice([ch1_index..ch1_index + 1, ch2_index..ch2_index + 1]);
             println!(
-                "{}{}: {}",
+                "{}{}: {:.4}",
                 alphabet[ch1_index].1,
                 alphabet[ch2_index].1,
                 prop.to_data().value[0]
@@ -97,10 +98,12 @@ fn main() -> io::Result<()> {
                 .slice([ch1_index..ch1_index + 1, ch2_index..ch2_index + 1])
                 .to_data()
                 .value[0];
+            n += 1.0;
         }
-        println!("{}: {}", word, log_prob);
+        println!("{}: {:.4}", word, log_prob);
     }
-    println!("Log likelihood: {}", log_prob);
+    println!("Negative log likelihood: {}", -log_prob);
+    println!("Averge negative log likelihood: {}", -(log_prob / n));
 
     Ok(())
 }
