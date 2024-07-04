@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use burn::backend::candle::CandleDevice;
 use burn::backend::Candle;
 use std::fs::File;
@@ -5,14 +6,68 @@ use std::io::{self, BufRead, BufReader};
 use std::iter;
 use std::path::Path;
 
-use burn::tensor::Tensor;
+use burn::tensor::{Distribution, Tensor};
 
 type BE = Candle;
 fn main() -> io::Result<()> {
+    let device = CandleDevice::default();
     let input_path = Path::new("data/names.txt");
 
     let words = read_words_from_file(&input_path)?;
 
+    // # Generate dataset
+
+    // first word as bigram
+    let first_word = extract_bigrams(&words[0]);
+    for (ch1, ch2) in &first_word {
+        println!("{}{}", ch1, ch2);
+    }
+
+    // input
+    let xs = &first_word
+        .iter()
+        .map(|(ch1, _)| ch1.clone())
+        .collect::<Vec<char>>();
+    // training answer, every x should have high probability to be y
+    let ys = &first_word
+        .iter()
+        .map(|(_, ch2)| ch2.clone())
+        .collect::<Vec<char>>();
+
+    println!("{:?}", xs);
+    println!("{:?}", ys);
+
+    // # Neural network with one layer of neurons
+
+    // initialize neuron layer weights with random values
+    let neuron_weighs = Tensor::<BE, 2>::random([27, 27], Distribution::Normal(0.0, 1.0), &device);
+
+    // skipping bias for now
+
+    // # Forward pass
+
+    // encode input character indexes to one-hot representation
+    let x_one_hots = xs
+        .iter()
+        .map(|x| Tensor::<BE, 2>::one_hot(char_to_index(x), 27, &device))
+        .collect::<Vec<Tensor<BE, 2>>>();
+    let x_one_hot_tensor = Tensor::cat(x_one_hots, 0);
+    println!("x_one_hot: {}", &x_one_hot_tensor);
+
+    // run input through the neuron layer
+    let logits = x_one_hot_tensor.matmul(neuron_weighs);
+    println!("logits: {}", &logits);
+
+    // apply softmax to get probabilities (softmax turns numbers to postive and then normalizes them)
+    let counts = logits.exp();
+    println!("counts: {}", &counts);
+    let probabilites = counts.clone() / counts.sum_dim(1);
+    println!("probabilities: {}", &probabilites);
+
+    Ok(())
+}
+
+fn makemore_probability_table(words: Vec<String>) {
     let bigram_counts = calculate_bigram_counts(&words, &ALPHABET);
 
     let device = CandleDevice::default();
@@ -24,8 +79,6 @@ fn main() -> io::Result<()> {
 
     println!("Negative log likelihood: {}", -log_prob);
     println!("Averge negative log likelihood: {}", -(log_prob / n));
-
-    Ok(())
 }
 
 fn read_words_from_file(input_path: &Path) -> io::Result<Vec<String>> {
@@ -81,6 +134,21 @@ fn extract_bigrams(word: &str) -> Vec<(char, char)> {
         .collect();
     chars.windows(2).map(|w| (w[0], w[1])).collect()
 }
+
+const INDEX_TO_CHAR: [char; 27] = [
+    '.', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+    's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+];
+
+fn char_to_index(c: &char) -> usize {
+    INDEX_TO_CHAR.iter().position(|x| x == c).unwrap()
+}
+
+// const CHAR_TO_INDEX: HashMap<char, usize> = INDEX_TO_CHAR
+//     .iter()
+//     .enumerate()
+//     .map(|(i, c)| (*c, i))
+//     .collect();
 
 const ALPHABET: [(usize, char); 27] = [
     (0, '.'),
